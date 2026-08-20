@@ -124,28 +124,65 @@ pid_t spawn(Task *task) {
     return pid;
 }
 
+void executar_task(Task *task) {
+    pid_t pid = spawn(task);
 
-int main() {
-    Task minha_tarefa;
+    if (pid <= 0) {
+        return;
+    }
 
-    // Preenchemos a tarefa manualmente tentando rodar um comando que não existe
-    strncpy(minha_tarefa.nome, "teste_isolado", 50);
-    strncpy(minha_tarefa.programa, "comando_bizarro_que_nao_existe", 100);
-    strncpy(minha_tarefa.argumentos[0], "-l", 100);
-    minha_tarefa.quant_args = 1;
+    int status;
+    waitpid(pid, &status, 0);
 
-    printf("Iniciando teste isolado do spawn...\n");
+    if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
+        printf("Tarefa '%s' terminou com codigo %d.\n",
+               task->nome, WEXITSTATUS(status));
+    } else if (WIFSIGNALED(status)) {
+        printf("Tarefa '%s' terminou pelo sinal %d.\n",
+               task->nome, WTERMSIG(status));
+    }
+}
 
-    // Chamamos a funcao alvo
-    pid_t pid = spawn(&minha_tarefa);
+void comando_run(char *args[], int n) {
+    if (n < 2) {
+        printf("Uso: run tarefa\n");
+        return;
+    }
 
-    // O pai espera o filho terminar
-    if (pid > 0) {
-        int status;
-        waitpid(pid, &status, 0);
-        
-        if (WIFEXITED(status)) {
-            printf("Teste concluido. Codigo de saida: %d\n", WEXITSTATUS(status));
+    int idx = procurar_task(args[1]);
+
+    if (idx == -1) {
+        printf("Tarefa '%s' nao existe.\n", args[1]);
+        return;
+    }
+
+    executar_task(&tarefas[idx]);
+}
+
+
+int main(void) {
+    char linha[MAX_LINE];
+    char *args[MAX_ARGS];
+
+    printf("ProcessFlow execucao iniciado.\n");
+
+    while (fgets(linha, sizeof(linha), stdin) != NULL) {
+        int n = separar_argumentos(linha, args);
+
+        if (n == 0) {
+            continue;
+        }
+
+        if (strcmp(args[0], "exit") == 0) {
+            break;
+        }
+
+        if (strcmp(args[0], "task") == 0) {
+            cadastrar_task(args, n);
+        } else if (strcmp(args[0], "run") == 0) {
+            comando_run(args, n);
+        } else {
+            printf("comando nao reconhecido.\n");
         }
     }
 
