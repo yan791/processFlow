@@ -150,14 +150,27 @@ void comando_run(char *args[], int n) {
         return;
     }
 
+    if (strcmp(args[1], "sequential") == 0) {
+        for (int i = 2; i < n; i++) {
+            int idx = procurar_task(args[i]);
+
+            if (idx == -1) {
+                printf("Tarefa '%s' nao existe.\n", args[i]);
+            } else {
+                executar_task(&tarefas[idx]);
+            }
+        }
+
+        return;
+    }
+
     int idx = procurar_task(args[1]);
 
     if (idx == -1) {
         printf("Tarefa '%s' nao existe.\n", args[1]);
-        return;
+    } else {
+        executar_task(&tarefas[idx]);
     }
-
-    executar_task(&tarefas[idx]);
 }
 
 
