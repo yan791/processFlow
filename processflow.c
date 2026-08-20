@@ -4,6 +4,9 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/wait.h>
 
 #define MAX_TASKS 100
 #define MAX_JOBS  100
@@ -101,31 +104,50 @@ void montar_exec_args(Task *task, char *args[]) {
     args[task->quant_args + 1] = NULL;
 }
 
-
-int main(void) {
-    char linha[MAX_LINE];
+pid_t spawn(Task *task) {
     char *args[MAX_ARGS];
+    montar_exec_args(task, args);
 
-    printf("ProcessFlow cadastro iniciado.\n");
+    pid_t pid = fork();
 
-    while (fgets(linha, sizeof(linha), stdin) != NULL) {
-        int n = separar_argumentos(linha, args);
+    if (pid == -1) {
+        perror("Erro no fork");
+        return -1;
+    }
 
-        if (n == 0) {
-            continue;
-        }
+    if (pid == 0) {
+        execvp(task->programa, args);
+        perror("Erro ao executar tarefa");
+        exit(127);
+    }
 
-        if (strcmp(args[0], "exit") == 0) {
-            break;
-        }
+    return pid;
+}
 
-        if (strcmp(args[0], "task") == 0) {
-            cadastrar_task(args, n);
-        } else {
-            printf("comando nao reconhecido.\n");
+
+int main() {
+    Task minha_tarefa;
+
+    // Preenchemos a tarefa manualmente tentando rodar um comando que não existe
+    strncpy(minha_tarefa.nome, "teste_isolado", 50);
+    strncpy(minha_tarefa.programa, "comando_bizarro_que_nao_existe", 100);
+    strncpy(minha_tarefa.argumentos[0], "-l", 100);
+    minha_tarefa.quant_args = 1;
+
+    printf("Iniciando teste isolado do spawn...\n");
+
+    // Chamamos a funcao alvo
+    pid_t pid = spawn(&minha_tarefa);
+
+    // O pai espera o filho terminar
+    if (pid > 0) {
+        int status;
+        waitpid(pid, &status, 0);
+        
+        if (WIFEXITED(status)) {
+            printf("Teste concluido. Codigo de saida: %d\n", WEXITSTATUS(status));
         }
     }
 
     return 0;
 }
-
