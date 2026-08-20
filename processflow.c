@@ -69,7 +69,7 @@ void cadastrar_task(char *args[], int n) {
         return;
     }
 
-    if (n - 2 > MAX_ARGS - 1) {
+    if (n - 3 > MAX_ARGS - 2) {
         printf("Numero de argumentos excede o limite (%d).\n", MAX_ARGS - 1);
         return;
     }
@@ -82,13 +82,14 @@ void cadastrar_task(char *args[], int n) {
     strncpy(t->programa, args[2], sizeof(t->programa) - 1);
     t->programa[sizeof(t->programa) - 1] = '\0';
 
-    t->quant_args = n - 2;
+    t->quant_args = n - 3;
 
-    for (int i = 2; i < n; i++) {
-        strncpy(t->argumentos[i - 2], args[i],
-                sizeof(t->argumentos[i - 2]) - 1);
-        t->argumentos[i - 2][sizeof(t->argumentos[i - 2]) - 1] = '\0';
+    for (int i = 3; i < n; i++) {
+    strncpy(t->argumentos[i - 3], args[i],
+            sizeof(t->argumentos[i - 3]) - 1);
+    t->argumentos[i - 3][sizeof(t->argumentos[i - 3]) - 1] = '\0';
     }
+
 
     quant_tasks++;
     printf("Tarefa '%s' cadastrada.\n", t->nome);
