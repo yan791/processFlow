@@ -91,6 +91,16 @@ void cadastrar_task(char *args[], int n) {
     printf("Tarefa '%s' cadastrada.\n", t->nome);
 }
 
+void montar_exec_args(Task *task, char *args[]) {
+    args[0] = task->programa;
+
+    for (int i = 0; i < task->quant_args; i++) {    
+        args[i + 1] = task->argumentos[i];
+    }
+
+    args[task->quant_args + 1] = NULL;
+}
+
 
 int main(void) {
     char linha[MAX_LINE];
