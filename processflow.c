@@ -55,12 +55,48 @@ int separar_argumentos(char *linha, char *args[]) {
     return n;
 }
 
+void cadastrar_task(char *args[], int n) {
+    if (n < 3) {
+        printf("Uso: task nome programa [argumentos]\n");
+        return;
+    }
+
+    if (quant_tasks >= MAX_TASKS) {
+        printf("Limite de tarefas atingido.\n");
+        return;
+    }
+
+    if (n - 2 > MAX_ARGS - 1) {
+        printf("Numero de argumentos excede o limite (%d).\n", MAX_ARGS - 1);
+        return;
+    }
+
+    Task *t = &tarefas[quant_tasks];
+
+    strncpy(t->nome, args[1], sizeof(t->nome) - 1);
+    t->nome[sizeof(t->nome) - 1] = '\0';
+
+    strncpy(t->programa, args[2], sizeof(t->programa) - 1);
+    t->programa[sizeof(t->programa) - 1] = '\0';
+
+    t->quant_args = n - 2;
+
+    for (int i = 2; i < n; i++) {
+        strncpy(t->argumentos[i - 2], args[i],
+                sizeof(t->argumentos[i - 2]) - 1);
+        t->argumentos[i - 2][sizeof(t->argumentos[i - 2]) - 1] = '\0';
+    }
+
+    quant_tasks++;
+    printf("Tarefa '%s' cadastrada.\n", t->nome);
+}
+
 
 int main(void) {
     char linha[MAX_LINE];
     char *args[MAX_ARGS];
 
-    printf("ProcessFlow parser iniciado.\n");
+    printf("ProcessFlow cadastro iniciado.\n");
 
     while (fgets(linha, sizeof(linha), stdin) != NULL) {
         int n = separar_argumentos(linha, args);
@@ -69,12 +105,17 @@ int main(void) {
             continue;
         }
 
-        printf("tokens=%d primeiro=%s\n", n, args[0]);
-
         if (strcmp(args[0], "exit") == 0) {
             break;
+        }
+
+        if (strcmp(args[0], "task") == 0) {
+            cadastrar_task(args, n);
+        } else {
+            printf("comando nao reconhecido.\n");
         }
     }
 
     return 0;
 }
+
