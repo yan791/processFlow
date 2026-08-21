@@ -226,22 +226,40 @@ void executar_parallel(Task **tasks, int n) {
 }
 
 int main(void) {
-    Task tarefa1;
-    Task tarefa2;
+    char linha[MAX_LINE];
+    char *args[MAX_ARGS];
 
-    strcpy(tarefa1.nome, "tarefa1");
-    strcpy(tarefa1.programa, "/bin/echo");
-    tarefa1.quant_args = 1;
-    strcpy(tarefa1.argumentos[0], "Ola");
+    printf("ProcessFlow iniciado.\n");
 
-    strcpy(tarefa2.nome, "tarefa2");
-    strcpy(tarefa2.programa, "/bin/echo");
-    tarefa2.quant_args = 1;
-    strcpy(tarefa2.argumentos[0], "ProcessFlow");
+    while (1) {
+        printf("processflow> ");
+        fflush(stdout);
 
-    Task *tasks[] = {&tarefa1, &tarefa2};
+        if (fgets(linha, sizeof(linha), stdin) == NULL) {
+            break;
+        }
 
-    executar_parallel(tasks, 2);
+        int n = separar_argumentos(linha, args);
+
+        if (n == 0) {
+            continue;
+        }
+
+        if (strcmp(args[0], "exit") == 0) {
+            break;
+        }
+
+        if (strcmp(args[0], "task") == 0) {
+            cadastrar_task(args, n);
+        } 
+        else if (strcmp(args[0], "run") == 0) {
+            comando_run(args, n);
+        } 
+        else {
+            printf("comando nao reconhecido.\n");
+        }
+    }
 
     return 0;
 }
+
