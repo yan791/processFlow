@@ -34,6 +34,7 @@ int quant_jobs = 0;
 int prox_job = 1;
 
 volatile sig_atomic_t chegou_sigchld = 0;
+void executar_parallel(Task **tasks, int n);
 
 int procurar_task(char *nome) {
     for (int i = 0; i < quant_tasks; i++) {
@@ -164,6 +165,27 @@ void comando_run(char *args[], int n) {
         return;
     }
 
+    if (strcmp(args[1], "parallel") == 0) {
+        Task *lista[MAX_ARGS];
+        int total = 0;
+
+        for (int i = 2; i < n; i++) {
+            int idx = procurar_task(args[i]);
+
+            if (idx == -1) {
+                printf("Tarefa '%s' nao existe.\n", args[i]);
+            } else {
+                lista[total++] = &tarefas[idx];
+            }
+        }
+
+        if (total > 0) {
+            executar_parallel(lista, total);
+        }
+
+        return;
+    }
+
     int idx = procurar_task(args[1]);
 
     if (idx == -1) {
@@ -174,31 +196,52 @@ void comando_run(char *args[], int n) {
 }
 
 
-int main(void) {
-    char linha[MAX_LINE];
-    char *args[MAX_ARGS];
+void executar_parallel(Task **tasks, int n) {
+    pid_t pids[MAX_ARGS];
+    char *nomes[MAX_ARGS];
+    int total = 0;
 
-    printf("ProcessFlow execucao iniciado.\n");
+    for (int i = 0; i < n; i++) {
+        pid_t pid = spawn(tasks[i]);
 
-    while (fgets(linha, sizeof(linha), stdin) != NULL) {
-        int n = separar_argumentos(linha, args);
-
-        if (n == 0) {
-            continue;
-        }
-
-        if (strcmp(args[0], "exit") == 0) {
-            break;
-        }
-
-        if (strcmp(args[0], "task") == 0) {
-            cadastrar_task(args, n);
-        } else if (strcmp(args[0], "run") == 0) {
-            comando_run(args, n);
-        } else {
-            printf("comando nao reconhecido.\n");
+        if (pid > 0) {
+            pids[total] = pid;
+            nomes[total] = tasks[i]->nome;
+            total++;
         }
     }
+
+    for (int i = 0; i < total; i++) {
+        int status;
+        waitpid(pids[i], &status, 0);
+
+        if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
+            printf("Tarefa '%s' terminou com codigo %d.\n",
+                   nomes[i], WEXITSTATUS(status));
+        } else if (WIFSIGNALED(status)) {
+            printf("Tarefa '%s' terminou pelo sinal %d.\n",
+                   nomes[i], WTERMSIG(status));
+        }
+    }
+}
+
+int main(void) {
+    Task tarefa1;
+    Task tarefa2;
+
+    strcpy(tarefa1.nome, "tarefa1");
+    strcpy(tarefa1.programa, "/bin/echo");
+    tarefa1.quant_args = 1;
+    strcpy(tarefa1.argumentos[0], "Ola");
+
+    strcpy(tarefa2.nome, "tarefa2");
+    strcpy(tarefa2.programa, "/bin/echo");
+    tarefa2.quant_args = 1;
+    strcpy(tarefa2.argumentos[0], "ProcessFlow");
+
+    Task *tasks[] = {&tarefa1, &tarefa2};
+
+    executar_parallel(tasks, 2);
 
     return 0;
 }
