@@ -225,41 +225,37 @@ void executar_parallel(Task **tasks, int n) {
     }
 }
 
-int main(void) {
-    char linha[MAX_LINE];
-    char *args[MAX_ARGS];
-
-    printf("ProcessFlow iniciado.\n");
-
-    while (1) {
-        printf("processflow> ");
-        fflush(stdout);
-
-        if (fgets(linha, sizeof(linha), stdin) == NULL) {
-            break;
-        }
-
-        int n = separar_argumentos(linha, args);
-
-        if (n == 0) {
-            continue;
-        }
-
-        if (strcmp(args[0], "exit") == 0) {
-            break;
-        }
-
-        if (strcmp(args[0], "task") == 0) {
-            cadastrar_task(args, n);
-        } 
-        else if (strcmp(args[0], "run") == 0) {
-            comando_run(args, n);
-        } 
-        else {
-            printf("comando nao reconhecido.\n");
-        }
+void registrar_job(pid_t pid, char *nome_task) {
+    if (quant_jobs >= MAX_JOBS) {
+        printf("Limite de jobs atingido.\n");
+        return;
     }
+
+    Job *j = &jobs[quant_jobs];
+    j->id = prox_job;
+    j->pid = pid;
+    j->ativo = 1;
+
+    strncpy(j->nome_task, nome_task, sizeof(j->nome_task) - 1);
+    j->nome_task[sizeof(j->nome_task) - 1] = '\0';
+
+    printf("[%d] %d\n", prox_job, pid);
+
+    quant_jobs++;
+    prox_job++;
+}
+
+void iniciar_task(Task *task) {
+    pid_t pid = spawn(task);
+
+    if (pid > 0) {
+        registrar_job(pid, task->nome);
+    }
+}
+
+
+int main() {
+    registrar_job(1234, "ordenar");
 
     return 0;
 }
-
