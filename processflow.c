@@ -1,5 +1,4 @@
 #define _POSIX_C_SOURCE 200809L
-
 #include <stdio.h>
 #include <signal.h>
 #include <sys/types.h>
@@ -34,7 +33,10 @@ int quant_jobs = 0;
 int prox_job = 1;
 
 volatile sig_atomic_t chegou_sigchld = 0;
+
 void executar_parallel(Task **tasks, int n);
+void cmd_jobs(char *args[], int n);
+void coletar_jobs_terminados(void);
 
 int procurar_task(char *nome) {
     for (int i = 0; i < quant_tasks; i++) {
@@ -86,11 +88,10 @@ void cadastrar_task(char *args[], int n) {
     t->quant_args = n - 3;
 
     for (int i = 3; i < n; i++) {
-    strncpy(t->argumentos[i - 3], args[i],
-            sizeof(t->argumentos[i - 3]) - 1);
-    t->argumentos[i - 3][sizeof(t->argumentos[i - 3]) - 1] = '\0';
+        strncpy(t->argumentos[i - 3], args[i],
+                sizeof(t->argumentos[i - 3]) - 1);
+        t->argumentos[i - 3][sizeof(t->argumentos[i - 3]) - 1] = '\0';
     }
-
 
     quant_tasks++;
     printf("Tarefa '%s' cadastrada.\n", t->nome);
@@ -99,7 +100,7 @@ void cadastrar_task(char *args[], int n) {
 void montar_exec_args(Task *task, char *args[]) {
     args[0] = task->programa;
 
-    for (int i = 0; i < task->quant_args; i++) {    
+    for (int i = 0; i < task->quant_args; i++) {
         args[i + 1] = task->argumentos[i];
     }
 
@@ -139,7 +140,8 @@ void executar_task(Task *task) {
     if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
         printf("Tarefa '%s' terminou com codigo %d.\n",
                task->nome, WEXITSTATUS(status));
-    } else if (WIFSIGNALED(status)) {
+    } 
+    else if (WIFSIGNALED(status)) {
         printf("Tarefa '%s' terminou pelo sinal %d.\n",
                task->nome, WTERMSIG(status));
     }
@@ -157,7 +159,8 @@ void comando_run(char *args[], int n) {
 
             if (idx == -1) {
                 printf("Tarefa '%s' nao existe.\n", args[i]);
-            } else {
+            } 
+            else {
                 executar_task(&tarefas[idx]);
             }
         }
@@ -174,7 +177,8 @@ void comando_run(char *args[], int n) {
 
             if (idx == -1) {
                 printf("Tarefa '%s' nao existe.\n", args[i]);
-            } else {
+            } 
+            else {
                 lista[total++] = &tarefas[idx];
             }
         }
@@ -190,11 +194,11 @@ void comando_run(char *args[], int n) {
 
     if (idx == -1) {
         printf("Tarefa '%s' nao existe.\n", args[1]);
-    } else {
+    } 
+    else {
         executar_task(&tarefas[idx]);
     }
 }
-
 
 void executar_parallel(Task **tasks, int n) {
     pid_t pids[MAX_ARGS];
@@ -216,11 +220,10 @@ void executar_parallel(Task **tasks, int n) {
         waitpid(pids[i], &status, 0);
 
         if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
-            printf("Tarefa '%s' terminou com codigo %d.\n",
-                   nomes[i], WEXITSTATUS(status));
-        } else if (WIFSIGNALED(status)) {
-            printf("Tarefa '%s' terminou pelo sinal %d.\n",
-                   nomes[i], WTERMSIG(status));
+            printf("Tarefa '%s' terminou com codigo %d.\n",nomes[i], WEXITSTATUS(status));
+        }
+        else if (WIFSIGNALED(status)) {
+            printf("Tarefa '%s' terminou pelo sinal %d.\n",nomes[i], WTERMSIG(status));
         }
     }
 }
@@ -252,15 +255,14 @@ void iniciar_task(Task *task) {
         registrar_job(pid, task->nome);
     }
 }
+
 void mostrar_jobs(void) {
     for (int i = 0; i < quant_jobs; i++) {
         if (jobs[i].ativo) {
             printf("[%d] %d Running %s\n",jobs[i].id,jobs[i].pid,jobs[i].nome_task);
         } 
         else {
-            printf("[%d] Finalizado %s\n",
-                   jobs[i].id,
-                   jobs[i].nome_task);
+            printf("[%d] Finalizado %s\n",jobs[i].id,jobs[i].nome_task);
         }
     }
 }
@@ -281,22 +283,103 @@ void cmd_start(char *args[], int n) {
     }
 }
 
+void cmd_jobs(char *args[], int n) {
+    (void)args;
+    (void)n;
+    mostrar_jobs();
+}
+
+void handler_sigchld(int sig) {
+    (void)sig;
+    chegou_sigchld = 1;
+}
+
+void coletar_jobs_terminados(void) {
+    int status;
+    pid_t pid;
+
+    while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
+        for (int i = 0; i < quant_jobs; i++) {
+            if (jobs[i].pid == pid && jobs[i].ativo) {
+                jobs[i].ativo = 0;
+
+                if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
+                    printf("[%d] Finalizado (codigo %d) %s\n",
+                           jobs[i].id,
+                           WEXITSTATUS(status),
+                           jobs[i].nome_task);
+                } else if (WIFSIGNALED(status)) {
+                    printf("[%d] Finalizado (sinal %d) %s\n",
+                           jobs[i].id,
+                           WTERMSIG(status),
+                           jobs[i].nome_task);
+                } else {
+                    printf("[%d] Finalizado %s\n",
+                           jobs[i].id,
+                           jobs[i].nome_task);
+                }
+
+                break;
+            }
+        }
+    }
+}
+
 int main(void) {
-    char *args[] = {"start", "teste"};
-    int n = 2;
+    char linha[MAX_LINE];
+    char *args[MAX_ARGS];
+    struct sigaction sa;
 
-    strcpy(tarefas[0].nome, "teste");
-    strcpy(tarefas[0].programa, "echo");
-    strcpy(tarefas[0].argumentos[0], "Teste do cmd_start");
-    tarefas[0].quant_args = 1;
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = handler_sigchld;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = SA_RESTART;
 
-    quant_tasks = 1;
+    if (sigaction(SIGCHLD, &sa, NULL) == -1) {
+        perror("Erro ao configurar SIGCHLD");
+        return 1;
+    }
 
-    printf("Teste 3 - start com tarefa valida:\n");
+    printf("ProcessFlow iniciado.\n");
 
-    cmd_start(args, n);
+    while (1) {
+        if (chegou_sigchld) {
+            chegou_sigchld = 0;
+            coletar_jobs_terminados();
+        }
 
-    printf("quant_jobs = %d\n", quant_jobs);
+        printf("processflow> ");
+        fflush(stdout);
 
+        if (fgets(linha, sizeof(linha), stdin) == NULL) {
+            break;
+        }
+
+        int n = separar_argumentos(linha, args);
+
+        if (n == 0) {
+            continue;
+        }
+
+        if (strcmp(args[0], "exit") == 0) {
+            break;
+        }
+
+        if (strcmp(args[0], "task") == 0) {
+            cadastrar_task(args, n);
+        } 
+        else if (strcmp(args[0], "run") == 0) {
+            comando_run(args, n);
+        } 
+        else if (strcmp(args[0], "start") == 0) {
+            cmd_start(args, n);
+        } 
+        else if (strcmp(args[0], "jobs") == 0) {
+            cmd_jobs(args, n);
+        } 
+        else {
+            printf("comando nao reconhecido.\n");
+        }
+    }
     return 0;
 }
