@@ -253,9 +253,19 @@ void iniciar_task(Task *task) {
     }
 }
 
+int main(void) {
+    Task teste;
 
-int main() {
-    registrar_job(1234, "ordenar");
+    strcpy(teste.nome, "teste_erro");
+    strcpy(teste.programa, "programa_inexistente");
+
+    teste.quant_args = 0;
+
+    printf("Testando iniciar_task() com programa inexistente...\n");
+
+    iniciar_task(&teste);
+
+    printf("quant_jobs = %d\n", quant_jobs);
 
     return 0;
 }
