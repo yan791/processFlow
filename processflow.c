@@ -264,11 +264,39 @@ void mostrar_jobs(void) {
         }
     }
 }
-int main(void) {
-    quant_jobs = 0;
 
-    printf("Teste 4 - nenhum job registrado:\n");
-    mostrar_jobs();
+void cmd_start(char *args[], int n) {
+    if (n < 2) {
+        printf("uso: start tarefa\n");
+        return;
+    }
+
+    int idx = procurar_task(args[1]);
+
+    if (idx == -1) {
+        printf("tarefa nao existe.\n");
+    } 
+    else {
+        iniciar_task(&tarefas[idx]);
+    }
+}
+
+int main(void) {
+    char *args[] = {"start", "teste"};
+    int n = 2;
+
+    strcpy(tarefas[0].nome, "teste");
+    strcpy(tarefas[0].programa, "echo");
+    strcpy(tarefas[0].argumentos[0], "Teste do cmd_start");
+    tarefas[0].quant_args = 1;
+
+    quant_tasks = 1;
+
+    printf("Teste 3 - start com tarefa valida:\n");
+
+    cmd_start(args, n);
+
+    printf("quant_jobs = %d\n", quant_jobs);
 
     return 0;
 }
