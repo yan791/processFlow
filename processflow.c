@@ -252,20 +252,23 @@ void iniciar_task(Task *task) {
         registrar_job(pid, task->nome);
     }
 }
-
+void mostrar_jobs(void) {
+    for (int i = 0; i < quant_jobs; i++) {
+        if (jobs[i].ativo) {
+            printf("[%d] %d Running %s\n",jobs[i].id,jobs[i].pid,jobs[i].nome_task);
+        } 
+        else {
+            printf("[%d] Finalizado %s\n",
+                   jobs[i].id,
+                   jobs[i].nome_task);
+        }
+    }
+}
 int main(void) {
-    Task teste;
+    quant_jobs = 0;
 
-    strcpy(teste.nome, "teste_erro");
-    strcpy(teste.programa, "programa_inexistente");
-
-    teste.quant_args = 0;
-
-    printf("Testando iniciar_task() com programa inexistente...\n");
-
-    iniciar_task(&teste);
-
-    printf("quant_jobs = %d\n", quant_jobs);
+    printf("Teste 4 - nenhum job registrado:\n");
+    mostrar_jobs();
 
     return 0;
 }
